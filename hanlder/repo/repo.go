@@ -10,15 +10,23 @@ import (
 )
 
 type conf map[string]map[string]string
+
+// Gitrepo struct represents a git repository
+// Worktree is the path to the working directory
+// Gitdir is the path to the .git directory
+// Conf is the configuration of the repository
 type Gitrepo struct {
 	Worktree string
 	Gitdir   string
 	Conf     conf
 }
 
+// writeStringFile writes the content to the file at path
 func writeStringFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
+
+// writeConfigFile writes the config to the file at path
 func writeConfigFile(path string, c conf) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -41,11 +49,13 @@ func writeConfigFile(path string, c conf) error {
 	}
 	return nil
 }
+
+// isDirEmpty checks if the directory at path is empty
 func isDirEmpty(path string) (bool, error) {
-	isPath,isDir:=pathExist(path)
-	fmt.Println(isPath,isDir)
-	if !isPath&&!isDir{
-		return true,nil
+	isPath, isDir := pathExist(path)
+	fmt.Println(isPath, isDir)
+	if !isPath && !isDir {
+		return true, nil
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -63,6 +73,8 @@ func isDirEmpty(path string) (bool, error) {
 
 	return false, nil // directory has at least one entry
 }
+
+// parseConfig parses the config file data and returns a conf map
 func parseConfig(data []byte) (conf, error) {
 	c := conf{} // initialize your map
 	section := ""
@@ -88,6 +100,8 @@ func parseConfig(data []byte) (conf, error) {
 
 	return c, nil
 }
+
+// NewGitrepo creates a new Gitrepo struct
 func NewGitrepo(path string, force bool) (*Gitrepo, error) {
 	repo := &Gitrepo{}
 	repo.Worktree = path
@@ -118,6 +132,8 @@ func NewGitrepo(path string, force bool) (*Gitrepo, error) {
 	}
 	return repo, nil
 }
+
+// pathExist checks if the path exists and if it is a directory
 func pathExist(path string) (exists bool, isDir bool) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -128,10 +144,14 @@ func pathExist(path string) (exists bool, isDir bool) {
 	}
 	return true, info.IsDir()
 }
+
+// RepoPath returns the path to the file in the .git directory calls recursive
 func RepoPath(repo *Gitrepo, paths ...string) string {
 	all := append([]string{repo.Gitdir}, paths...)
 	return filepath.Join(all...)
 }
+
+// RepoDir returns the path to the directory in the .git directory
 func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 
 	path := RepoPath(repo, paths...)
@@ -155,9 +175,10 @@ func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 		return path, nil
 	}
 
-
 	return "", nil
 }
+
+// RepoFile returns the path to the file in the .git directory
 func RepoFile(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 	if len(paths) == 0 {
 		return "", errors.New("no paths provided")
@@ -168,6 +189,8 @@ func RepoFile(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 	}
 	return RepoPath(repo, paths...), nil
 }
+
+// RepoCreate creates a new git repository
 func RepoCreate(path string) (*Gitrepo, error) {
 	repo, err := NewGitrepo(path, true)
 	if err != nil {
@@ -222,6 +245,8 @@ func RepoCreate(path string) (*Gitrepo, error) {
 
 	return repo, nil
 }
+
+// getDefaultConfig returns the default configuration for a new repository
 func getDefaultConfig() conf {
 	Conf := conf{}
 	addSection(Conf, "core")
@@ -229,34 +254,40 @@ func getDefaultConfig() conf {
 	setSection(Conf, "core", "bare", "false")
 	return Conf
 }
+
+// addSection adds a new section to the config map
 func addSection(c conf, section string) {
 	if _, ok := c[section]; !ok {
 		c[section] = make(map[string]string)
 	}
 }
+
+// setSection sets the value for a key in a section
 func setSection(c conf, section, key, value string) {
 	addSection(c, section)
 	c[section][key] = value
 }
-func RepoFind(path string,req bool) (*Gitrepo,error){
-	path,err:=filepath.Abs(path)
+
+// RepoFind finds the root of the git repository
+func RepoFind(path string, req bool) (*Gitrepo, error) {
+	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	_,isDir:=pathExist(path)
-	
-	if isDir{
-		return NewGitrepo(path,false)
+	_, isDir := pathExist(path)
+
+	if isDir {
+		return NewGitrepo(path, false)
 	}
 	parentPath := filepath.Dir(path)
-	if parentPath==path{
-		if req{
-			return nil,errors.New("No git found")
-			
-		}else{
-			return nil,nil
+	if parentPath == path {
+		if req {
+			return nil, errors.New("No git found")
+
+		} else {
+			return nil, nil
 		}
 	}
 
-	return  RepoFind(parentPath,req)
+	return RepoFind(parentPath, req)
 }
