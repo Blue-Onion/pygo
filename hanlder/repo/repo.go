@@ -274,7 +274,7 @@ func RepoFind(path string, req bool) (*Gitrepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, isDir := pathExist(path)
+	_, isDir := pathExist(filepath.Join(path, ".tit"))
 
 	if isDir {
 		return NewGitrepo(path, false)
@@ -282,7 +282,7 @@ func RepoFind(path string, req bool) (*Gitrepo, error) {
 	parentPath := filepath.Dir(path)
 	if parentPath == path {
 		if req {
-			return nil, errors.New("No git found")
+			return nil, errors.New("No tit found")
 
 		} else {
 			return nil, nil
