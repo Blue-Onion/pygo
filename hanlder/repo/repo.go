@@ -42,26 +42,26 @@ func writeConfigFile(path string, c conf) error {
 	return nil
 }
 func isDirEmpty(path string) (bool, error) {
+	isPath,isDir:=pathExist(path)
+	fmt.Println(isPath,isDir)
+	if !isPath&&!isDir{
+		return true,nil
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return false, err
 	}
 	defer f.Close()
 
-	// Read a single entry
-	entries, err := f.Readdirnames(1)
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil // directory is empty
+	}
 	if err != nil {
-		if err == io.EOF {
-			return true, nil // empty directory
-		}
-		return false, err // other errors
+		return false, err // some other error
 	}
 
-	// If we got any entry, directory is not empty
-	if len(entries) > 0 {
-		return false, nil
-	}
-	return true, nil
+	return false, nil // directory has at least one entry
 }
 func parseConfig(data []byte) (conf, error) {
 	c := conf{} // initialize your map
@@ -133,13 +133,13 @@ func RepoPath(repo *Gitrepo, paths ...string) string {
 	return filepath.Join(all...)
 }
 func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
-	fmt.Println("Hello")
+
 	path := RepoPath(repo, paths...)
 
 	isPath, isDir := pathExist(path)
 
 	if isPath {
-		fmt.Println("Hello")
+
 		if isDir {
 			return path, nil
 		} else {
@@ -154,7 +154,7 @@ func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 		}
 		return path, nil
 	}
-	fmt.Println("Hello")
+
 
 	return "", nil
 }
@@ -174,17 +174,15 @@ func RepoCreate(path string) (*Gitrepo, error) {
 		return nil, err
 	}
 	isWorkTree, isWorkDir := pathExist(repo.Worktree)
-	fmt.Println(repo.Worktree)
-	fmt.Println(isWorkTree)
-	fmt.Println(isWorkDir)
+
 	if isWorkTree {
 		if !isWorkDir {
 			return nil, errors.New("There is no directory")
 		}
-		fmt.Println(repo.Gitdir)
-		isGit, _ := isDirEmpty(repo.Gitdir)
-		fmt.Println(isGit)
-		if isGit {
+
+		isGit, err := isDirEmpty(repo.Gitdir)
+		fmt.Println(err)
+		if !isGit {
 			return nil, errors.New("Git dir is not empty")
 
 		}
