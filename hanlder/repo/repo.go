@@ -238,3 +238,25 @@ func setSection(c conf, section, key, value string) {
 	addSection(c, section)
 	c[section][key] = value
 }
+func RepoFind(path string,req bool) (*Gitrepo,error){
+	path,err:=filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	_,isDir:=pathExist(path)
+	
+	if isDir{
+		return NewGitrepo(path,false)
+	}
+	parentPath := filepath.Dir(path)
+	if parentPath==path{
+		if req{
+			return nil,errors.New("No git found")
+			
+		}else{
+			return nil,nil
+		}
+	}
+
+	return  RepoFind(parentPath,req)
+}
