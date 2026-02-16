@@ -3,6 +3,7 @@ package repo
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ type Gitrepo struct {
 	Gitdir   string
 	Conf     conf
 }
+
 func writeStringFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
@@ -40,20 +42,26 @@ func writeConfigFile(path string, c conf) error {
 	return nil
 }
 func isDirEmpty(path string) (bool, error) {
-	// Open directory
 	f, err := os.Open(path)
 	if err != nil {
 		return false, err
 	}
 	defer f.Close()
 
-	// Try reading a single entry
-	_, err = f.Readdir(1)
+	// Read a single entry
+	entries, err := f.Readdirnames(1)
 	if err != nil {
-		// No entries → empty
-		return true, nil
+		if err == io.EOF {
+			return true, nil // empty directory
+		}
+		return false, err // other errors
 	}
-	return false, err // either got an entry (not empty) or another error
+
+	// If we got any entry, directory is not empty
+	if len(entries) > 0 {
+		return false, nil
+	}
+	return true, nil
 }
 func parseConfig(data []byte) (conf, error) {
 	c := conf{} // initialize your map
@@ -110,21 +118,28 @@ func NewGitrepo(path string, force bool) (*Gitrepo, error) {
 	}
 	return repo, nil
 }
-func pathExist(path string) (bool, bool) {
+func pathExist(path string) (exists bool, isDir bool) {
 	info, err := os.Stat(path)
-
-	return err == nil, info.IsDir()
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, false
+		}
+		return false, false // or return err
+	}
+	return true, info.IsDir()
 }
 func RepoPath(repo *Gitrepo, paths ...string) string {
 	all := append([]string{repo.Gitdir}, paths...)
 	return filepath.Join(all...)
 }
 func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
+	fmt.Println("Hello")
 	path := RepoPath(repo, paths...)
 
 	isPath, isDir := pathExist(path)
 
 	if isPath {
+		fmt.Println("Hello")
 		if isDir {
 			return path, nil
 		} else {
@@ -139,6 +154,7 @@ func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 		}
 		return path, nil
 	}
+	fmt.Println("Hello")
 
 	return "", nil
 }
@@ -158,12 +174,17 @@ func RepoCreate(path string) (*Gitrepo, error) {
 		return nil, err
 	}
 	isWorkTree, isWorkDir := pathExist(repo.Worktree)
+	fmt.Println(repo.Worktree)
+	fmt.Println(isWorkTree)
+	fmt.Println(isWorkDir)
 	if isWorkTree {
 		if !isWorkDir {
 			return nil, errors.New("There is no directory")
 		}
+		fmt.Println(repo.Gitdir)
 		isGit, _ := isDirEmpty(repo.Gitdir)
-		if !isGit {
+		fmt.Println(isGit)
+		if isGit {
 			return nil, errors.New("Git dir is not empty")
 
 		}
@@ -187,27 +208,27 @@ func RepoCreate(path string) (*Gitrepo, error) {
 	}
 	if err := writeStringFile(RepoPath(repo, "description"),
 		"Unnamed Repo; Change this description file to make a repository.\n"); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	// HEAD
 	if err := writeStringFile(RepoPath(repo, "HEAD"),
 		"ref: refs/heads/master\n"); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	// config
 	if err := writeConfigFile(RepoPath(repo, "config"), getDefaultConfig()); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	return repo, nil
 }
-func getDefaultConfig() conf{
-	Conf:=conf{}
-	addSection(Conf,"core")
-	setSection(Conf,"core","repoformatversion","0")
-	setSection(Conf,"core","bare","false")
+func getDefaultConfig() conf {
+	Conf := conf{}
+	addSection(Conf, "core")
+	setSection(Conf, "core", "repoformatversion", "0")
+	setSection(Conf, "core", "bare", "false")
 	return Conf
 }
 func addSection(c conf, section string) {
@@ -216,6 +237,6 @@ func addSection(c conf, section string) {
 	}
 }
 func setSection(c conf, section, key, value string) {
-	addSection(c, section) 
+	addSection(c, section)
 	c[section][key] = value
 }
