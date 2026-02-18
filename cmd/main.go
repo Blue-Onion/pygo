@@ -51,26 +51,4 @@ func main() {
 		fmt.Println("Invalid command. Available commands: init")
 	}
 }
-func isValid(s string) bool {
-    if len(s)==0{
-        return true
-    }
-  stack:=[]string{}
-  hashMap := make(map[string]string)
-  hashMap[")"]="("
-  hashMap["}"]="{"
-  hashMap["]"]="["
-  for _,i:=range s{
-	v,ok:=hashMap[string(i)]
-	if ok{
-		if v!=stack[len(stack)-1]{
-			return false
-		}
-		stack=stack[:len(stack)-1]
-		continue
-	}
-	stack=append(stack, string(i))
-  }
-  return len(stack)==0
-  
-}
+
