@@ -8,7 +8,7 @@ import (
 )
 
 func cmdInit(path string) (*repo.Gitrepo, error) {
-	fmt.Println("Initializing the repo at", path)
+	
 	r, err := repo.RepoCreate(path)
 	if err != nil {
 		return nil, err

@@ -53,7 +53,7 @@ func writeConfigFile(path string, c conf) error {
 // isDirEmpty checks if the directory at path is empty
 func isDirEmpty(path string) (bool, error) {
 	isPath, isDir := pathExist(path)
-	fmt.Println(isPath, isDir)
+
 	if !isPath && !isDir {
 		return true, nil
 	}
@@ -203,8 +203,8 @@ func RepoCreate(path string) (*Gitrepo, error) {
 			return nil, errors.New("There is no directory")
 		}
 
-		isGit, err := isDirEmpty(repo.Gitdir)
-		fmt.Println(err)
+		isGit, _ := isDirEmpty(repo.Gitdir)
+
 		if !isGit {
 			return nil, errors.New("Git dir is not empty")
 
@@ -271,9 +271,13 @@ func setSection(c conf, section, key, value string) {
 // RepoFind finds the root of the git repository
 func RepoFind(path string, req bool) (*Gitrepo, error) {
 	path, err := filepath.Abs(path)
+
+
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(path)
+
 	_, isDir := pathExist(filepath.Join(path, ".tit"))
 
 	if isDir {

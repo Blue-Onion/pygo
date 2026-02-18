@@ -12,4 +12,5 @@
 *.out
 
 # Project specific
-test/
+.Ds_Store
+.tit
