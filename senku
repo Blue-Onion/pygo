@@ -1,0 +1,2 @@
+#!/bin/bash
+go run /Users/adityasinghrawat/Desktop/project/PyGo/cmd/main.go "$@"

@@ -9,6 +9,7 @@ import (
 )
 
 func cmdInit(path string) (*repo.Gitrepo, error) {
+
 	r, err := repo.RepoCreate(path)
 	if err != nil {
 		return nil, err
