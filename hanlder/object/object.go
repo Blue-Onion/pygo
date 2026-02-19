@@ -3,6 +3,8 @@ package object
 import (
 	"bytes"
 	"compress/zlib"
+
+
 	"io"
 	"os"
 
@@ -51,9 +53,18 @@ func ObjectRead(repo *repo.Gitrepo, name string, typ string) (GitObject, error) 
 	i := bytes.IndexByte(data, 0)
 	data = data[i+1:]
 
-	obj := &Blob{Data: data, Fmt: []byte("blob")}
+	obj := &Blob{Data: []byte(data), Fmt: []byte("blob")}
 	return obj, nil
 }
-func ObjectWrite(repo *repo.Gitrepo) {
 
+func CatFile(repo *repo.Gitrepo,name string,typ string)([]byte,error){
+	obj,err:=ObjectRead(repo,name,typ)
+	if err != nil {
+		return []byte(""),err
+	}
+	data,err:=obj.Serialize()
+	if err != nil {
+		return []byte(""),err
+	}
+	return data,nil
 }
