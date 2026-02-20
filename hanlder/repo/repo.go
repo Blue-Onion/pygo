@@ -276,7 +276,7 @@ func RepoFind(path string, req bool) (*Gitrepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(path)
+
 
 	_, isDir := pathExist(filepath.Join(path, ".tit"))
 

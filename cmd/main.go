@@ -71,15 +71,14 @@ func main() {
 			return
 		}
 
-		typ := args[1]
+		tag := args[1]
 		name := args[2]
 
 		if len(args) >= 4 {
 			path = args[3]
 		}
-		fmt.Println("object",name)
-		fmt.Println("type",typ)
-		CmdCatFile(path, name, typ)
+	
+		CmdCatFile(path, name, tag)
 
 	default:
 		fmt.Println("Invalid command. Available commands: init, cat-file")
