@@ -29,27 +29,77 @@ func (b *Blob) Deserialize(raw []byte) error {
 	b.Data = raw
 	return nil
 }
-
-type Tree struct {
-	Data []byte
-	Fmt  []byte
-}
-
-func (b *Tree) Serialize() ([]byte, error) {
-	return b.Data, nil
-}
-
-func (b *Tree) Deserialize(raw []byte) error {
-	b.Data = raw
-	return nil
-}
-
-func (b *Tree) Type() string {
-	return "tree"
-}
 func (b *Blob) Type() string {
 	return "blob"
 }
+
+type Tree struct {
+	Data []TreeData
+	Fmt  []byte
+}
+type TreeData struct {
+	Mode []byte
+	Name []byte
+	Sha  []byte
+}
+
+func (t *Tree) Serialize() ([]byte, error) {
+	var out bytes.Buffer
+
+	for _, entry := range t.Data {
+
+		if len(entry.Sha) != 20 {
+			return nil, fmt.Errorf("invalid sha length: expected 20 bytes")
+		}
+		out.Write(entry.Mode)
+		out.WriteByte(' ')
+		out.Write(entry.Name)
+		out.WriteByte(0)
+		out.Write(entry.Sha)
+	}
+
+	return out.Bytes(), nil
+}
+
+func (t *Tree) Deserialize(raw []byte) error {
+	t.Data = nil
+	n := 0
+
+	for n < len(raw) {
+		spaceI := bytes.IndexByte(raw[n:], ' ')
+		if spaceI == -1 {
+			return fmt.Errorf("invalid tree: no space found")
+		}
+		spaceI += n
+		mode := raw[n:spaceI]
+		nullI := bytes.IndexByte(raw[spaceI+1:], 0)
+		if nullI == -1 {
+			return fmt.Errorf("invalid tree: no null found")
+		}
+		nullI += spaceI + 1
+		name := raw[spaceI+1 : nullI]
+		shaStart := nullI + 1
+		shaEnd := shaStart + 20
+		if shaEnd > len(raw) {
+			return fmt.Errorf("invalid tree: sha overflow")
+		}
+		sha := raw[shaStart:shaEnd]
+		entry := TreeData{
+			Mode: mode,
+			Name: name,
+			Sha:  sha,
+		}
+		t.Data = append(t.Data, entry)
+		n = shaEnd
+	}
+
+	return nil
+}
+
+func (t *Tree) Type() string {
+	return "tree"
+}
+
 func lengthAndContent(raw []byte) (int, []byte, error) {
 	parts := bytes.Split(raw, []byte(" "))
 	if len(parts) != 2 {
@@ -90,15 +140,11 @@ func ObjectRead(repo *repo.Gitrepo, name string) (GitObject, error) {
 	switch string(typ) {
 
 	case "blob":
-		obj = &Blob{
-			Data: content,
-			Fmt:  []byte("blob"),
-		}
+		obj = &Blob{}
+		obj.Deserialize(content)
 	case "tree":
-		obj = &Tree{
-			Data: content,
-			Fmt:  []byte("tree"),
-		}
+		obj = &Tree{}
+		obj.Deserialize(content)
 	default:
 		return nil, fmt.Errorf("Type not found")
 	}
@@ -108,18 +154,31 @@ func ObjectRead(repo *repo.Gitrepo, name string) (GitObject, error) {
 func CatFile(repo *repo.Gitrepo, name string, tag string) ([]byte, error) {
 	obj, err := ObjectRead(repo, name)
 	if err != nil {
-		return []byte(""), err
+		return nil, err
 	}
-	var data []byte
-	switch tag{
-	case "-p":
-		data, err = obj.Serialize()
-	case "-t":
-		data = []byte(obj.Type())
 
+	switch tag {
+
+	case "-p":
+
+		switch o := obj.(type) {
+
+		case *Tree:
+			for _, v := range o.Data {
+				fmt.Printf("%s %x\t%s\n",
+					v.Mode,
+					v.Sha,
+					v.Name,
+				)
+			}
+
+		case *Blob:
+			fmt.Print(string(o.Data))
+		}
+
+	case "-t":
+		return []byte(obj.Type()), nil
 	}
-	if err != nil {
-		return []byte(""), err
-	}
-	return data, nil
+
+	return nil, nil
 }

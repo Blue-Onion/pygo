@@ -23,13 +23,10 @@ func CmdCatFile(path string, name string, typ string) {
 		return
 	}
 
-	data, err := object.CatFile(repo, name, typ)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	object.CatFile(repo, name, typ)
+	
 
-	fmt.Println(string(data))
+
 }
 func main() {
 	var path string
@@ -77,7 +74,6 @@ func main() {
 		if len(args) >= 4 {
 			path = args[3]
 		}
-	
 		CmdCatFile(path, name, tag)
 
 	default:
