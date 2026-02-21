@@ -174,7 +174,7 @@ func ObjectHash(path string, typ string, repo *repo.Gitrepo) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(obj)
+
 	err = obj.Deserialize(data)
 	if err != nil {
 		return "", err

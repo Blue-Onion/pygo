@@ -166,7 +166,7 @@ func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 	if !os.IsNotExist(err) {
 		return "", err
 	}
-	fmt.Println(mkdir)
+
 	if mkdir {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return "", err
