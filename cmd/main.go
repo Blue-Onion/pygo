@@ -16,7 +16,7 @@ func cmdInit(path string) (*repo.Gitrepo, error) {
 	}
 	return r, nil
 }
-func CmdCatFile(path string, name string, typ string) {
+func cmdCatFile(path string, name string, typ string) {
 	repo, err := repo.RepoFind(path, true)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -27,6 +27,48 @@ func CmdCatFile(path string, name string, typ string) {
 	
 
 
+}
+func cmdHashObject(path string, args []string) {
+	repo, err := repo.RepoFind(path, true)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if len(args) < 1 {
+		fmt.Println("Usage: hash-object [-t type] <file>")
+		return
+	}
+
+	typ := "blob" // default like real git
+	file := ""
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-t":
+			if i+1 >= len(args) {
+				fmt.Println("Missing type after -t")
+				return
+			}
+			typ = args[i+1]
+			i++
+		default:
+			file = args[i]
+		}
+	}
+
+	if file == "" {
+		fmt.Println("No file specified")
+		return
+	}
+
+	sha, err := object.ObjectHash(file, typ, repo)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(sha)
 }
 func main() {
 	var path string
@@ -62,7 +104,7 @@ func main() {
 		fmt.Println("Repository initialized successfully!")
 
 	case "cat-file":
-		// Usage: cat-file <type> <object> [path]
+
 		if len(args) < 3 {
 			fmt.Println("Usage: cat-file <type> <object> [path]")
 			return
@@ -74,8 +116,28 @@ func main() {
 		if len(args) >= 4 {
 			path = args[3]
 		}
-		CmdCatFile(path, name, tag)
-
+		cmdCatFile(path, name, tag)
+	case "hash-object":
+		// Usage: hash-object [-t type] [-w] <file> [path]
+		if len(args) < 2 {
+			fmt.Println("Usage: hash-object [-t type] [-w] <file> [path]")
+			return
+		}
+	
+		// Optional repo path as last argument
+		if len(args) >= 3 {
+			last := args[len(args)-1]
+			if info, err := os.Stat(last); err == nil && info.IsDir() {
+				path = last
+				args = args[1 : len(args)-1]
+			} else {
+				args = args[1:]
+			}
+		} else {
+			args = args[1:]
+		}
+	
+		cmdHashObject(path, args)
 	default:
 		fmt.Println("Invalid command. Available commands: init, cat-file")
 	}

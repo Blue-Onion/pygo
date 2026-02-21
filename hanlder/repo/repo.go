@@ -52,7 +52,7 @@ func writeConfigFile(path string, c conf) error {
 
 // isDirEmpty checks if the directory at path is empty
 func isDirEmpty(path string) (bool, error) {
-	isPath, isDir := pathExist(path)
+	isPath, isDir := PathExist(path)
 
 	if !isPath && !isDir {
 		return true, nil
@@ -110,7 +110,7 @@ func NewGitrepo(path string, force bool) (*Gitrepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	isPath, _ := pathExist(cf)
+	isPath, _ := PathExist(cf)
 	if isPath {
 		data, err := os.ReadFile(cf)
 		if err != nil {
@@ -133,8 +133,8 @@ func NewGitrepo(path string, force bool) (*Gitrepo, error) {
 	return repo, nil
 }
 
-// pathExist checks if the path exists and if it is a directory
-func pathExist(path string) (exists bool, isDir bool) {
+// PathExist checks if the path exists and if it is a directory
+func PathExist(path string) (exists bool, isDir bool) {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -153,29 +153,28 @@ func RepoPath(repo *Gitrepo, paths ...string) string {
 
 // RepoDir returns the path to the directory in the .git directory
 func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
-
 	path := RepoPath(repo, paths...)
 
-	isPath, isDir := pathExist(path)
-
-	if isPath {
-
-		if isDir {
+	info, err := os.Stat(path)
+	if err == nil {
+		if info.IsDir() {
 			return path, nil
-		} else {
-			return "", errors.New("path exists but is not a directory")
 		}
+		return "", errors.New("path exists but is not a directory")
+	}
+
+	if !os.IsNotExist(err) {
+		return "", err
 	}
 
 	if mkdir {
-		err := os.MkdirAll(path, 0755)
-		if err != nil {
+		if err := os.MkdirAll(path, 0755); err != nil {
 			return "", err
 		}
 		return path, nil
 	}
 
-	return "", nil
+	return "", errors.New("directory does not exist")
 }
 
 // RepoFile returns the path to the file in the .git directory
@@ -196,7 +195,7 @@ func RepoCreate(path string) (*Gitrepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	isWorkTree, isWorkDir := pathExist(repo.Worktree)
+	isWorkTree, isWorkDir := PathExist(repo.Worktree)
 
 	if isWorkTree {
 		if !isWorkDir {
@@ -278,7 +277,7 @@ func RepoFind(path string, req bool) (*Gitrepo, error) {
 	}
 
 
-	_, isDir := pathExist(filepath.Join(path, ".tit"))
+	_, isDir := PathExist(filepath.Join(path, ".tit"))
 
 	if isDir {
 		return NewGitrepo(path, false)

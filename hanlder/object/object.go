@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"compress/zlib"
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
@@ -26,6 +27,7 @@ func (b *Blob) Serialize() ([]byte, error) {
 }
 
 func (b *Blob) Deserialize(raw []byte) error {
+
 	b.Data = raw
 	return nil
 }
@@ -150,6 +152,76 @@ func ObjectRead(repo *repo.Gitrepo, name string) (GitObject, error) {
 	return obj, nil
 }
 
+func HashString(objType string, data []byte) string {
+
+	header := objType + " " + strconv.Itoa(len(data)) + "\x00"
+
+	store := append([]byte(header), data...)
+
+	hash := sha1.Sum(store)
+
+	return fmt.Sprintf("%x", hash)
+}
+func ObjectHash(path string, typ string, repo *repo.Gitrepo) (string, error) {
+	var obj GitObject
+	switch typ {
+	case "blob":
+		obj = &Blob{}
+	case "tree":
+		obj = &Tree{}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(obj)
+	err = obj.Deserialize(data)
+	if err != nil {
+		return "", err
+	}
+
+	return ObjectWrite(repo, obj)
+
+}
+func ObjectWrite(Gitrepo *repo.Gitrepo, obj GitObject) (string, error) {
+
+	data, err := obj.Serialize()
+	if err != nil {
+		return "", err
+	}
+
+	header := obj.Type() + " " + strconv.Itoa(len(data)) + "\x00"
+	store := append([]byte(header), data...)
+
+	hash := sha1.Sum(store)
+	sha := fmt.Sprintf("%x", hash)
+
+	path, err := repo.RepoFile(Gitrepo, true, "objects", sha[:2], sha[2:])
+	if err != nil {
+		return "", err
+	}
+
+	exist, _ := repo.PathExist(path)
+	if exist {
+		return sha, nil
+	}
+
+	var buf bytes.Buffer
+	w := zlib.NewWriter(&buf)
+	if _, err := w.Write(store); err != nil {
+		return "", err
+	}
+	if err := w.Close(); err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(path, buf.Bytes(), 0644)
+	if err != nil {
+		return "", err
+	}
+
+	return sha, nil
+}
 func CatFile(repo *repo.Gitrepo, name string, tag string) {
 	obj, err := ObjectRead(repo, name)
 	if err != nil {
