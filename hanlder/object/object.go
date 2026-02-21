@@ -138,7 +138,6 @@ func ObjectRead(repo *repo.Gitrepo, name string) (GitObject, error) {
 	}
 	var obj GitObject
 	switch string(typ) {
-
 	case "blob":
 		obj = &Blob{}
 		obj.Deserialize(content)
@@ -151,18 +150,15 @@ func ObjectRead(repo *repo.Gitrepo, name string) (GitObject, error) {
 	return obj, nil
 }
 
-func CatFile(repo *repo.Gitrepo, name string, tag string) ([]byte, error) {
+func CatFile(repo *repo.Gitrepo, name string, tag string) {
 	obj, err := ObjectRead(repo, name)
 	if err != nil {
-		return nil, err
+		fmt.Println(err.Error())
+		return
 	}
-
 	switch tag {
-
 	case "-p":
-
 		switch o := obj.(type) {
-
 		case *Tree:
 			for _, v := range o.Data {
 				fmt.Printf("%s %x\t%s\n",
@@ -171,14 +167,10 @@ func CatFile(repo *repo.Gitrepo, name string, tag string) ([]byte, error) {
 					v.Name,
 				)
 			}
-
 		case *Blob:
 			fmt.Print(string(o.Data))
 		}
-
 	case "-t":
-		return []byte(obj.Type()), nil
+		fmt.Println(obj.Type())
 	}
-
-	return nil, nil
 }
