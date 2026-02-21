@@ -106,7 +106,7 @@ func NewGitrepo(path string, force bool) (*Gitrepo, error) {
 	repo := &Gitrepo{}
 	repo.Worktree = path
 	repo.Gitdir = filepath.Join(repo.Worktree, ".tit")
-	cf, err := RepoFile(repo, false, "config")
+	cf, err := RepoFile(repo, true, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func RepoDir(repo *Gitrepo, mkdir bool, paths ...string) (string, error) {
 	if !os.IsNotExist(err) {
 		return "", err
 	}
-
+	fmt.Println(mkdir)
 	if mkdir {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return "", err
