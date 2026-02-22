@@ -47,7 +47,7 @@ type TreeData struct {
 
 func (t *Tree) Serialize() ([]byte, error) {
 	var out bytes.Buffer
-
+	
 	for _, entry := range t.Data {
 
 		if len(entry.Sha) != 20 {
@@ -66,7 +66,7 @@ func (t *Tree) Serialize() ([]byte, error) {
 func (t *Tree) Deserialize(raw []byte) error {
 	t.Data = nil
 	n := 0
-
+	fmt.Println(string(raw))
 	for n < len(raw) {
 		spaceI := bytes.IndexByte(raw[n:], ' ')
 		if spaceI == -1 {
@@ -233,11 +233,11 @@ func CatFile(repo *repo.Gitrepo, name string, tag string) {
 		switch o := obj.(type) {
 		case *Tree:
 			for _, v := range o.Data {
-				fmt.Printf("%s %x\t%s\n",
-					v.Mode,
-					v.Sha,
-					v.Name,
-				)
+				fmt.Printf("%s %s\t%s\n",
+    v.Mode,
+    fmt.Sprintf("%x", v.Sha),  // <-- hex string
+    v.Name,
+)
 			}
 		case *Blob:
 			fmt.Print(string(o.Data))

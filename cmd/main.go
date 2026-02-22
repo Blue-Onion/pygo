@@ -44,6 +44,7 @@ func cmdHashObject(path string, args []string) {
 	file := ""
 
 	for i := 0; i < len(args); i++ {
+
 		switch args[i] {
 		case "-t":
 			if i+1 >= len(args) {
