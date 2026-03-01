@@ -47,7 +47,7 @@ type TreeData struct {
 
 func (t *Tree) Serialize() ([]byte, error) {
 	var out bytes.Buffer
-	
+
 	for _, entry := range t.Data {
 
 		if len(entry.Sha) != 20 {
@@ -234,10 +234,10 @@ func CatFile(repo *repo.Gitrepo, name string, tag string) {
 		case *Tree:
 			for _, v := range o.Data {
 				fmt.Printf("%s %s\t%s\n",
-    v.Mode,
-    fmt.Sprintf("%x", v.Sha),  // <-- hex string
-    v.Name,
-)
+					v.Mode,
+					fmt.Sprintf("%x", v.Sha), // <-- hex string
+					v.Name,
+				)
 			}
 		case *Blob:
 			fmt.Print(string(o.Data))
@@ -245,4 +245,34 @@ func CatFile(repo *repo.Gitrepo, name string, tag string) {
 	case "-t":
 		fmt.Println(obj.Type())
 	}
+}
+func kvlmParse(raw []byte, start int, kvlm map[string][]string) (map[string][]string, []byte, error) {
+	spc := bytes.Index(raw[start:], []byte(" "))
+	nl := bytes.Index(raw[start:], []byte("\n"))
+	if spc == -1 || nl == -1 || spc > nl {
+		return kvlm, raw[start:], nil
+	}
+	spc += start
+	nl += start
+
+	key := raw[start:spc]
+	end := nl
+
+	for end+1 < len(raw) && raw[end+1] == ' ' {
+		nextNl := bytes.Index(raw[end+1:], []byte("\n"))
+		if nextNl == -1 {
+			end = len(raw)
+			break
+		}
+		end += nextNl + 1
+	}
+	value := bytes.ReplaceAll(raw[spc+1:end], []byte("\n "), []byte("\n"))
+	v, ok := kvlm[string(key)]
+	if ok {
+		kvlm[string(key)] = append(v, string(value))
+	} else {
+		kvlm[string(key)] = []string{string(value)}
+	}
+
+	return kvlmParse(raw, end+1, kvlm)
 }

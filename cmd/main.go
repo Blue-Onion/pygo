@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
 	"github.com/Blue-Onion/pygo/hanlder/object"
 	"github.com/Blue-Onion/pygo/hanlder/repo"
 )
@@ -144,3 +143,12 @@ func main() {
 	}
 }
 
+func getConcatenation(nums []int) []int {
+    res:=make([]int,len(nums)*2)
+	for i,v:=range nums{
+		res[i]=v
+		res[i+len(nums)]=v
+
+	}
+	return res
+}
