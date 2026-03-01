@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-
 	"github.com/Blue-Onion/pygo/hanlder/repo"
 )
 
@@ -21,7 +20,6 @@ type Blob struct {
 	Data []byte
 	Fmt  []byte
 }
-
 func (b *Blob) Serialize() ([]byte, error) {
 	return b.Data, nil
 }
@@ -101,7 +99,62 @@ func (t *Tree) Deserialize(raw []byte) error {
 func (t *Tree) Type() string {
 	return "tree"
 }
+type Commit struct {
+	Data CommitData
+	Fmt  []byte
+}
 
+type CommitData struct{
+	Header map[string][]string
+	Message []byte
+}
+func (c *Commit) Type() string {
+	return "commit"
+}
+func (c *Commit) Deserialize(raw []byte)error{
+	kvlm:=map[string][]string{}
+	header,message,err:=kvlmParse(raw,0,kvlm)
+	if err != nil {
+		return err
+	}
+	c.Data.Header=header
+	c.Data.Message=message
+	c.Fmt=[]byte("commit")
+	return nil
+}
+func (c *Commit) Serialize() ([]byte,error) {
+	var buf bytes.Buffer
+
+	// Write headers
+	for key, values := range c.Data.Header {
+		for _, value := range values {
+
+			
+			lines := bytes.Split([]byte(value), []byte("\n"))
+
+
+			buf.WriteString(key)
+			buf.WriteByte(' ')
+			buf.Write(lines[0])
+			buf.WriteByte('\n')
+
+
+			for _, line := range lines[1:] {
+				buf.WriteByte(' ')
+				buf.Write(line)
+				buf.WriteByte('\n')
+			}
+		}
+	}
+
+
+	buf.WriteByte('\n')
+
+
+	buf.Write(c.Data.Message)
+
+	return buf.Bytes(),nil
+}
 func lengthAndContent(raw []byte) (int, []byte, error) {
 	parts := bytes.Split(raw, []byte(" "))
 	if len(parts) != 2 {
@@ -250,7 +303,7 @@ func kvlmParse(raw []byte, start int, kvlm map[string][]string) (map[string][]st
 	spc := bytes.Index(raw[start:], []byte(" "))
 	nl := bytes.Index(raw[start:], []byte("\n"))
 	if spc == -1 || nl == -1 || spc > nl {
-		return kvlm, raw[start:], nil
+		return kvlm, raw[start+1:], nil
 	}
 	spc += start
 	nl += start
