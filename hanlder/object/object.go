@@ -16,145 +16,7 @@ type GitObject interface {
 	Deserialize([]byte) error
 	Type() string
 }
-type Blob struct {
-	Data []byte
-	Fmt  []byte
-}
-func (b *Blob) Serialize() ([]byte, error) {
-	return b.Data, nil
-}
 
-func (b *Blob) Deserialize(raw []byte) error {
-
-	b.Data = raw
-	return nil
-}
-func (b *Blob) Type() string {
-	return "blob"
-}
-
-type Tree struct {
-	Data []TreeData
-	Fmt  []byte
-}
-type TreeData struct {
-	Mode []byte
-	Name []byte
-	Sha  []byte
-}
-
-func (t *Tree) Serialize() ([]byte, error) {
-	var out bytes.Buffer
-
-	for _, entry := range t.Data {
-
-		if len(entry.Sha) != 20 {
-			return nil, fmt.Errorf("invalid sha length: expected 20 bytes")
-		}
-		out.Write(entry.Mode)
-		out.WriteByte(' ')
-		out.Write(entry.Name)
-		out.WriteByte(0)
-		out.Write(entry.Sha)
-	}
-
-	return out.Bytes(), nil
-}
-
-func (t *Tree) Deserialize(raw []byte) error {
-	t.Data = nil
-	n := 0
-	fmt.Println(string(raw))
-	for n < len(raw) {
-		spaceI := bytes.IndexByte(raw[n:], ' ')
-		if spaceI == -1 {
-			return fmt.Errorf("invalid tree: no space found")
-		}
-		spaceI += n
-		mode := raw[n:spaceI]
-		nullI := bytes.IndexByte(raw[spaceI+1:], 0)
-		if nullI == -1 {
-			return fmt.Errorf("invalid tree: no null found")
-		}
-		nullI += spaceI + 1
-		name := raw[spaceI+1 : nullI]
-		shaStart := nullI + 1
-		shaEnd := shaStart + 20
-		if shaEnd > len(raw) {
-			return fmt.Errorf("invalid tree: sha overflow")
-		}
-		sha := raw[shaStart:shaEnd]
-		entry := TreeData{
-			Mode: mode,
-			Name: name,
-			Sha:  sha,
-		}
-		t.Data = append(t.Data, entry)
-		n = shaEnd
-	}
-
-	return nil
-}
-
-func (t *Tree) Type() string {
-	return "tree"
-}
-type Commit struct {
-	Data CommitData
-	Fmt  []byte
-}
-
-type CommitData struct{
-	Header map[string][]string
-	Message []byte
-}
-func (c *Commit) Type() string {
-	return "commit"
-}
-func (c *Commit) Deserialize(raw []byte)error{
-	kvlm:=map[string][]string{}
-	header,message,err:=kvlmParse(raw,0,kvlm)
-	if err != nil {
-		return err
-	}
-	c.Data.Header=header
-	c.Data.Message=message
-	c.Fmt=[]byte("commit")
-	return nil
-}
-func (c *Commit) Serialize() ([]byte,error) {
-	var buf bytes.Buffer
-
-	// Write headers
-	for key, values := range c.Data.Header {
-		for _, value := range values {
-
-			
-			lines := bytes.Split([]byte(value), []byte("\n"))
-
-
-			buf.WriteString(key)
-			buf.WriteByte(' ')
-			buf.Write(lines[0])
-			buf.WriteByte('\n')
-
-
-			for _, line := range lines[1:] {
-				buf.WriteByte(' ')
-				buf.Write(line)
-				buf.WriteByte('\n')
-			}
-		}
-	}
-
-
-	buf.WriteByte('\n')
-
-
-	buf.Write(c.Data.Message)
-
-	return buf.Bytes(),nil
-}
 func lengthAndContent(raw []byte) (int, []byte, error) {
 	parts := bytes.Split(raw, []byte(" "))
 	if len(parts) != 2 {
@@ -222,6 +84,8 @@ func ObjectHash(path string, typ string, repo *repo.Gitrepo) (string, error) {
 		obj = &Blob{}
 	case "tree":
 		obj = &Tree{}
+	case "commit":
+		obj = &Commit{}
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -298,34 +162,4 @@ func CatFile(repo *repo.Gitrepo, name string, tag string) {
 	case "-t":
 		fmt.Println(obj.Type())
 	}
-}
-func kvlmParse(raw []byte, start int, kvlm map[string][]string) (map[string][]string, []byte, error) {
-	spc := bytes.Index(raw[start:], []byte(" "))
-	nl := bytes.Index(raw[start:], []byte("\n"))
-	if spc == -1 || nl == -1 || spc > nl {
-		return kvlm, raw[start+1:], nil
-	}
-	spc += start
-	nl += start
-
-	key := raw[start:spc]
-	end := nl
-
-	for end+1 < len(raw) && raw[end+1] == ' ' {
-		nextNl := bytes.Index(raw[end+1:], []byte("\n"))
-		if nextNl == -1 {
-			end = len(raw)
-			break
-		}
-		end += nextNl + 1
-	}
-	value := bytes.ReplaceAll(raw[spc+1:end], []byte("\n "), []byte("\n"))
-	v, ok := kvlm[string(key)]
-	if ok {
-		kvlm[string(key)] = append(v, string(value))
-	} else {
-		kvlm[string(key)] = []string{string(value)}
-	}
-
-	return kvlmParse(raw, end+1, kvlm)
 }
